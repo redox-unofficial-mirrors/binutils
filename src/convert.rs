@@ -1,5 +1,3 @@
-use std::mem;
-
 /// Convert a base 256 (byte) to a hexadecimal representation
 #[inline]
 pub fn u8_to_hex(from: u8) -> (u8, u8) {
@@ -15,19 +13,14 @@ pub fn hex_to_u8((a, b): (u8, u8)) -> u8 {
 /// Convert an u32 to an byte array. This operation is safe. It is an noop on big-endianness
 #[inline]
 pub fn u32_byte_array(int: u32) -> [u8; 4] {
-    // Safe
-    // ((int >> (32 - 8 - n * 8)) & 255) as u8
-    // or unsafe:
-    unsafe {
-        mem::transmute::<_, [u8; 4]>(int.to_be())
-    }
+    int.to_be_bytes()
 }
 
 /// Convert hex to ascii
 #[inline]
 pub fn hex_to_ascii(b: u8) -> u8 {
     match b {
-        0...9 => b'0' + b,
+        0..=9 => b'0' + b,
         _ => b'a' - 10 + b,
     }
 }
@@ -36,7 +29,7 @@ pub fn hex_to_ascii(b: u8) -> u8 {
 #[inline]
 pub fn ascii_to_hex(b: u8) -> u8 {
     match b {
-        b'0'...b'9' => b - b'0',
+        b'0'..=b'9' => b - b'0',
         _ => b - b'a' + 10,
     }
 }

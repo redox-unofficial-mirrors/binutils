@@ -4,17 +4,17 @@ use std::env;
 use std::fs;
 use std::io;
 
-use binutils::strings::read;
+use binutils::extra::io::{fail, WriteExt};
 use binutils::extra::option::OptionalExt;
-use binutils::extra::io::{WriteExt, fail};
+use binutils::strings::read;
 
-const HELP: &'static [u8] = br#"
+const HELP: &[u8] = br#"
     NAME
         strings - inspect a binary file for strings of printable characters.
     SYNOPSIS
         strings [-h | --help] [FILE]
     DESCRIPTION
-        This utility will read the file from the path given in the argument. If no argument is given, 'strings' will read from the standard input. The byte stream is then inspected for contiguous, printable ASCII characters of length 4 or more. These strings of printable characters are written to the standard output. Each contiguous strings are seperated by a newline (0x0A).
+        This utility will read the file from the path given in the argument. If no argument is given, 'strings' will read from the standard input. The byte stream is then inspected for contiguous, printable ASCII characters of length 4 or more. These strings of printable characters are written to the standard output. Each contiguous strings are separated by a newline (0x0A).
 
         This utility is useful for inspecting binary files for human readable information, to determine the contents. Note that all non-ASCII characters are treated as non-printable, due to the numerous false positives otherwise.
 
@@ -54,7 +54,7 @@ fn main() {
         Some(a) => match a.as_ref() {
             "-h" | "--help" => {
                 stdout.writeln(HELP).try(&mut stderr);
-            },
+            }
             f => {
                 let file = fs::File::open(f).try(&mut stderr);
                 read(file, stdout, stderr);

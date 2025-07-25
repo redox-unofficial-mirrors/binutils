@@ -2,23 +2,22 @@ extern crate binutils;
 
 use std::env;
 use std::fs;
-use std::io::{self, Write, Read, Stderr};
-use std::mem;
+use std::io::{self, Read, Stderr, Write};
 
+use binutils::convert::{ascii_to_hex, hex_to_ascii, hex_to_u8, u32_byte_array, u8_to_hex};
+use binutils::extra::io::{fail, WriteExt};
 use binutils::extra::option::OptionalExt;
-use binutils::extra::io::{WriteExt, fail};
-use binutils::convert::{u8_to_hex, hex_to_u8, u32_byte_array, hex_to_ascii, ascii_to_hex};
 use binutils::strings::IsPrintable;
 
-const HELP: &'static [u8] = br#"
+const HELP: &[u8] = br#"
     NAME
-        hexdump - dump the hexidecimal representation of a byte stream.
+        hexdump - dump the hexadecimal representation of a byte stream.
     SYNOPSIS
         hexdump [-h | --help] [-r | --reverse] [FILE]
     DESCRIPTION
-        This utility will dump the hexidecimal representation of a file or the standard input, in a stylized way. Hexdump utility behaves like 'xxd'.
+        This utility will dump the hexadecimal representation of a file or the standard input, in a stylized way. Hexdump utility behaves like 'xxd'.
 
-        The first column signifies the address of the first byte on the line. Each line contains 16 bytes, grouped in groups of two bytes, sepereated by space. The last column contains the printable characters in the last 16 bytes. The non-printable characters are replaced by a '.'.
+        The first column signifies the address of the first byte on the line. Each line contains 16 bytes, grouped in groups of two bytes, separated by space. The last column contains the printable characters in the last 16 bytes. The non-printable characters are replaced by a '.'.
     OPTIONS
         -h
         --help
@@ -41,7 +40,11 @@ const HELP: &'static [u8] = br#"
 "#;
 
 /// Encode a single byte to the output stream
-fn encode_byte<R: Read, W: Write>(stdin: &mut R, stdout: &mut W, stderr: &mut Stderr) -> Option<u8> {
+fn encode_byte<R: Read, W: Write>(
+    stdin: &mut R,
+    stdout: &mut W,
+    stderr: &mut Stderr,
+) -> Option<u8> {
     let byte = if let Some(x) = stdin.bytes().next() {
         x.try(&mut *stderr)
     } else {
@@ -52,7 +55,9 @@ fn encode_byte<R: Read, W: Write>(stdin: &mut R, stdout: &mut W, stderr: &mut St
     let hex = u8_to_hex(byte);
 
     // Write it to stdout.
-    stdout.write(&[hex_to_ascii(hex.0), hex_to_ascii(hex.1)]).try(stderr);
+    stdout
+        .write(&[hex_to_ascii(hex.0), hex_to_ascii(hex.1)])
+        .try(stderr);
 
     Some(if byte.is_printable() {
         byte
@@ -66,7 +71,7 @@ fn encode<R: Read, W: Write>(mut stdin: R, mut stdout: W, mut stderr: Stderr) {
     let rem;
     // This is the char buffer. The last 16 byte column, which prints the printable characters.
     // The non-printable ones are replaced with `.`.
-    let mut ascii: [u8; 16] = unsafe { mem::uninitialized() };
+    let mut ascii: [u8; 16] = [0; 16];
 
     let mut line = 0;
 
@@ -76,7 +81,9 @@ fn encode<R: Read, W: Write>(mut stdin: R, mut stdout: W, mut stderr: Stderr) {
             let hex = u8_to_hex(b);
             // Print this value to the first column (denoting the address of the first byte of the
             // line.)
-            stdout.write(&[hex_to_ascii(hex.0), hex_to_ascii(hex.1)]).try(&mut stderr);
+            stdout
+                .write(&[hex_to_ascii(hex.0), hex_to_ascii(hex.1)])
+                .try(&mut stderr);
         }
         stdout.write(b": ").try(&mut stderr);
 
@@ -129,21 +136,17 @@ fn decode<R: Read, W: Write>(stdin: R, mut stdout: W, mut stderr: Stderr) {
         // Process the inner 8 columns
         for _ in 0..16 {
             // The first hex digit to decode.
-            let h1 = ascii_to_hex(
-                if let Some(x) = stdin.next() {
-                    x.try(&mut stderr)
-                } else {
-                    return;
-                }
-            );
+            let h1 = ascii_to_hex(if let Some(x) = stdin.next() {
+                x.try(&mut stderr)
+            } else {
+                return;
+            });
             // The second hex digit to decode.
-            let h2 = ascii_to_hex(
-                if let Some(x) = stdin.next() {
-                    x.try(&mut stderr)
-                } else {
-                    return;
-                }
-            );
+            let h2 = ascii_to_hex(if let Some(x) = stdin.next() {
+                x.try(&mut stderr)
+            } else {
+                return;
+            });
 
             // Write the decoded, joined hex digits in binary form.
             stdout.write(&[hex_to_u8((h1, h2))]).try(&mut stderr);
@@ -176,11 +179,12 @@ fn main() {
 
     match args.nth(1) {
         None => encode(io::stdin(), stdout, stderr),
-        Some(a) => match a.as_ref() { // MIR plz
+        Some(a) => match a.as_ref() {
+            // MIR plz
             "-h" | "--help" => {
                 // HEEEEEELP.
                 stdout.writeln(HELP).try(&mut stderr);
-            },
+            }
             "-r" | "--reverse" => {
                 match args.next() {
                     // Decode.
@@ -194,12 +198,12 @@ fn main() {
                         decode(file, stdout, stderr);
                     }
                 }
-            },
+            }
             // Read from a file, instead of standard input.
             f => {
                 let file = fs::File::open(f).try(&mut stderr);
                 encode(file, stdout, stderr);
-            },
+            }
         },
     }
 }
