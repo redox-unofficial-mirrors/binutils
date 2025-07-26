@@ -2,6 +2,7 @@
 name = "binutils"
 version = "0.1.0"
 authors = ["Ticki <Ticki@users.noreply.github.com>"]
+# edition = "2021"
 
 [[bin]]
 name = "strings"
